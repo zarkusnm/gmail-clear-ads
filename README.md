@@ -12,3 +12,6 @@ Which guarantees there is some way for people to unsubscribe from pesky emails, 
 Can't use http requests for a 200 status code check because:
 The initial request (which gets a 200 status code) only indicates that this page was successfully reached, not that the subsequent actions were completed.
 If your code checks for a 200 status code and assumes unsubscription, it can lead to false positives. This is because the successful loading of the page does not necessarily mean that the unsubscription was performed. The page might require additional user actions to complete the process.
+
+
+Requires import of IMAPlib, email, regex, requests, and beautifulsoup
