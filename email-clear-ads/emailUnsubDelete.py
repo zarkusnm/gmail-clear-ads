@@ -4,10 +4,10 @@ import email
 import re
 import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+import os
 
-
-
-# imap server address corresponding to email account
+# imap server addresses corresponding to email accounts
 ''' gmail: imap.gmail.com , yahoo: imap.mail.yahoo.com , yahoo mail plus: plus.imap.mail.yahoo.com , yahoo mail uk: imap.mail.yahoo.co.uk , yahoo mail deutschland : imap.mail.yahoo.com , 
 yahoo mail au/nz : imap.mail.yahoo.au , aol.com : imap.aol.com , at&t : imap.att.yahoo.com , NTL @ntlworld.com : imap.ntlworld.com , btconnect : imap4.btconnect.com , o2 deutschland : imap.o2online.de ,
 t-online deutschland : secureimap.t-online.de , 1&1 : imap.1and1.com , 1&1 deutschland : imap.1und1.de , verizon : incoming.verizon.net , zoho mail : imap.zoho.com , mail.com : imap.mail.com , gmx.com : imap.gmx.com ,
@@ -15,11 +15,13 @@ net address by usa.net : imap.postoffice.net
 '''
 
 imap_server = 'imap.gmail.com'
-
+load_dotenv()
+email_address = os.getenv('email')
+password = os.getenv('password')
 
 # method that performs unsubscribing and deleting function
 # requires amount of emails you want to scan through, email, specific app password (not general password), keyword set to look for, and exception set also to look for 
-def clearSpam( numScanning , email_address , password, keywords, xeptions ):
+def clearSpam( numScanning , keywords, xeptions ):
     # initiate list of links
     unsublinks=[]
     unsubfinds=0
@@ -158,4 +160,4 @@ def clearSpam( numScanning , email_address , password, keywords, xeptions ):
 # inputs, placeholder values given below
 keywords = { "unsubscribe" , "opt out", "email preferences"}
 xeptions = {"amazon", "ebay"}
-clearSpam(2000, "email@gmail.com", "app password", keywords, xeptions)
+clearSpam(2000, keywords, xeptions)
