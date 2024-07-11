@@ -1,18 +1,29 @@
-
+# required imports, pip install each in command prompt to run program
 import imaplib
 import email
 import re
 import requests
 from bs4 import BeautifulSoup
 
+
+
 # imap server address corresponding to email account
+''' gmail: imap.gmail.com , yahoo: imap.mail.yahoo.com , yahoo mail plus: plus.imap.mail.yahoo.com , yahoo mail uk: imap.mail.yahoo.co.uk , yahoo mail deutschland : imap.mail.yahoo.com , 
+yahoo mail au/nz : imap.mail.yahoo.au , aol.com : imap.aol.com , at&t : imap.att.yahoo.com , NTL @ntlworld.com : imap.ntlworld.com , btconnect : imap4.btconnect.com , o2 deutschland : imap.o2online.de ,
+t-online deutschland : secureimap.t-online.de , 1&1 : imap.1and1.com , 1&1 deutschland : imap.1und1.de , verizon : incoming.verizon.net , zoho mail : imap.zoho.com , mail.com : imap.mail.com , gmx.com : imap.gmx.com ,
+net address by usa.net : imap.postoffice.net
+'''
+
 imap_server = 'imap.gmail.com'
 
-# method that performs unsubscribing and deleting function
-# requires amount of emails you want to scan through, email, and specific app password
-def clearSpam( numScanning , email_address , password ):
 
-    # logging in to imap server with email and app password
+# method that performs unsubscribing and deleting function
+# requires amount of emails you want to scan through, email, specific app password (not general password), keyword set to look for, and exception set also to look for 
+def clearSpam( numScanning , email_address , password, keywords, xeptions ):
+    # initiate list of links
+    unsublinks=[]
+    unsubfinds=0
+    # logging in to imap server with email and app!!! password
     try:
         m = imaplib.IMAP4_SSL(imap_server)
         m.login(email_address, password)
@@ -42,10 +53,10 @@ def clearSpam( numScanning , email_address , password ):
         if numScanning < 1:
             break
 
-        # fetches string if fetch was successful and tuple of emails in RFC822 (header+body) formatting
+        # fetches string if fetch was successful and tuple of email parts in RFC822 (header+body) formatting
         status, msg_data = m.fetch(num, '(RFC822)')
 
-        # checking fetch status if fails then goes to next email
+        # checking fetch status, if fails goes to next email
         if status != 'OK':
             print(f"Failed to fetch email with ID: {num}")
             continue
@@ -57,7 +68,7 @@ def clearSpam( numScanning , email_address , password ):
                 # email method that returns an EmailMessage object from the raw email data
                 msg = email.message_from_bytes(response_part[1])
                 email_body = ""
-                # this part of the code decodes each part of the EmailMessage object and concats the readable text to
+                # this part of the code decodes each part of the raw EmailMessage object and concats the readable text to
                 # an email_body string, that then will be searched through for the word 'unsubscribe'
                 # some emails may have unsubscribe links hidden under other names like "email preferences",
                 # so I will work to give the code multiple success pathways, and also exceptions for emails
@@ -74,56 +85,77 @@ def clearSpam( numScanning , email_address , password ):
                             try:
                                 email_body += part.get_payload(decode=True).decode()
                             except UnicodeDecodeError:
-                                print(f"{num} has uncommon characters")
+                                print(f"{num} has a decoding error, check the html")
                 else:
                     try:
                         email_body = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
                     except UnicodeDecodeError:
                         email_body = msg.get_payload(decode=True).decode('latin-1', errors='ignore')
-                # finally checks full string of email decoded text for the word unsubscribe and then proceeds
+                # finally checks full string of email decoded text for the keywords and then proceeds
                 # with finding the link in html and requesting to click the link
-                if 'unsubscribe' in email_body.lower():
-                    print(f"Unsubscribe found in email ID: {num}")
-                    # parses email body for all html and stores in soup var
-                    soup = BeautifulSoup(email_body, 'html.parser')
-                    unsubscribe_link = None
+                if any(keyword in email_body.lower() for keyword in keywords):
+                    # checks if any of the exception words/phrases are found in the email, then passes through if false
+                    if not any(xeption in email_body.lower() for xeption in xeptions):
+                        print(f"Unsubscribe found in {num}")
+                        unsubfinds += 1
+                        # parses email body for all html and stores in soup var
+                        soup = BeautifulSoup(email_body, 'html.parser')
+                        
 
-                    # Regex to find unsubscribe link
-                    link_regex = re.compile(r'unsubscribe', re.IGNORECASE)
+                        # creates regex compatible string for all keywords
+                        pattern = '|'.join(keywords)
+                        link_regex = re.compile(pattern, re.IGNORECASE)
+                        
 
-                    # for each link in the html of the email, if unsubscribe is in the link, update unsubscribe_link
-                    # so that it equals the link with name 'unsubscribe'
-                    for link in soup.find_all('a', href=True):
-                        if link_regex.search(link['href']):
-                            unsubscribe_link = link['href']
-                            break
+                        # grabs all links in the body of the email
+                        links = soup.find_all('a', href=True)
 
-                    # clicks unsubscribe link if found and returns link
-                    if unsubscribe_link:
-                        response = requests.get(unsubscribe_link)
-
-                        if response.status_code == 200:
-                            print(f"Unsubscribed successfully from: {unsubscribe_link}")
-                        else:
-                            print(f"Failed to unsubscribe from: {unsubscribe_link}")
+                        # for each link in the html of the email, if a keyword is in the link, append unsublinks to have that link
+                        # so that it equals the link with name 'unsubscribe' or keyword 
+                        if links:
+                            checker1 = len(unsublinks)
+                            for link in links:
+                                if link_regex.search(link['href']) and checker1 == len(unsublinks):
+                                    unsublinks.append(link['href'])
+                            if checker1 != len(unsublinks):
+                                print("Unsub link found")
+                        # stores email in deletion queue regardless if a link was found or not
+                        m.store(num, '+FLAGS', '\\Deleted')
+                        # decrements scanned emails
+                        numScanning -= 1
                     else:
-                        print("No unsubscribe link found.")
-                    # stores email in deletion queue regardless if a link was found or not
-                    m.store(num, '+FLAGS', '\\Deleted')
-                    # decrements scanned emails
-                    numScanning -= 1
+                        print(f"Exception in {num}")
+                        # decrements scanned emails
+                        numScanning -= 1
                 else:
-                    print(f"No unsubscribe in email ID: {num}")
+                    print(f"No unsubscribe in {num}")
                     # decrements scanned emails
                     numScanning -= 1
+    # prints percent of emails with a keyword in them that returned a link
+    try:
+        print(f"{(len(unsublinks)/unsubfinds)*100} percent of emails with a keyword in them returned a link!")
+    except:
+        print("No keywords found")
+    # prints all found links after attempting to unsubscribe from each, returning if successful as well, separated by lines of ==
+    if unsublinks:
+        for value in unsublinks:
+            print("===================================================================================================================================================")
+            response = requests.get(value)
+            if response.status_code == 200:
+                print("Unsubscribed successfully! (Check link to verify)")
+                print(value)
+                print("===================================================================================================================================================")
+            else:
+                print("Manual Unsubscription Needed, Click Here To Confirm:")
+                print(value)
+                print("===================================================================================================================================================")
     # clears deletion queue and logs out of email
     m.expunge()
     m.logout()
+
     print(f"Logged out and completed")
 
-''' thinking about clearing decoding segment for unnecessary code and checks, as well as just printing all 
-unsubscribe links once found and adding a way for exceptions in emails to be included, as well as a way for
-exceptions that don't mention unsubscribe in their links to be caught, perhaps by decoding then just requesting the
-final link in the body once the word unsubscribe is found?
-'''
-clearSpam(1, "email@gmail.com", "password")
+# inputs, placeholder values given below
+keywords = { "unsubscribe" , "opt out", "email preferences"}
+xeptions = {"amazon", "ebay"}
+clearSpam(2000, "email@gmail.com", "app password", keywords, xeptions)
