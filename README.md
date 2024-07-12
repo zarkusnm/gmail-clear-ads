@@ -9,9 +9,13 @@ Under the 2003 CAN-SPAM Act, quote:
 Which guarantees there is some way for people to unsubscribe from pesky emails, although companies get around this by forcing you to go through multiple pages, check boxes, and changing the names of the link to things like
 "email preferences", "opting out", etc. to prevent bots from scraping through and mass unsubscribing (like I attempt to do). Most companies assume correctly that the average person will not go through every email manually to unsubscribe, but hopefully this program makes that easier to do, with my deleting of emails, grabbing and listing of links, and using exceptions and keywords to snatch all possible instances you want to delete.
 
-Can't use http requests for a 200 status code check because:
-The initial request (which gets a 200 status code) only indicates that this page was successfully reached, not that the subsequent actions were completed.
-If your code checks for a 200 status code and assumes unsubscription, it can lead to false positives. This is because the successful loading of the page does not necessarily mean that the unsubscription was performed. The page might require additional user actions to complete the process.
+1. Clone the repository
+2. Create a `.env` file in the root directory of your project by copying the `.env.example` file
+3. Fill in your actual email and app password in the `.env` file as well as the number of emails you want to scan and the sets of keywords and exceptions
+4. install and import required dependencies of IMAPlib, email, re, requests, load_dotenv from dotenv, os, and beautifulsoup from bs4
+5. Run the project
+   
+```bash
+cp .env.example .env
 
 
-Requires import of IMAPlib, email, regex, requests, and beautifulsoup
